@@ -28,17 +28,12 @@ class CostCategory:
         self.name = name
 
         if not uuid:
-            all_cc = [
+            if all_cc := [
                 x.get("uuid")
                 for x in CostCategory.get_all_cost_categories()
                 if x.get("name") == self.name
-            ]
-            if all_cc:
-                self.uuid = [
-                    x.get("uuid")
-                    for x in CostCategory.get_all_cost_categories()
-                    if x.get("name") == self.name
-                ].pop()
+            ]:
+                self.uuid = all_cc.pop()
             else:
                 self.uuid = None
 
