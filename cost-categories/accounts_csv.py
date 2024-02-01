@@ -2,7 +2,7 @@ from csv import reader
 from sys import argv, exit
 from collections import defaultdict
 
-from common import CloudAccount, CostCategory
+from common import CloudAccount, CostCategory, Bucket, ViewCondition, ViewOperator
 
 
 if __name__ == "__main__":
@@ -29,76 +29,62 @@ if __name__ == "__main__":
     # build cost catagory buckets
     cost_targets = []
 
-    for bucket in buckets.keys():
+    for name in buckets.keys():
         # create rules for each cloud
-        rules = []
+        bucket = Bucket(name)
 
-        if aws_accounts := [x.identifier for x in buckets[bucket] if x.cloud == "aws"]:
-            rules.append(
+        if aws_accounts := [x.identifier for x in buckets[name] if x.cloud == "aws"]:
+            bucket.add_rule(
                 {
                     "viewConditions": [
-                        {
-                            "type": "VIEW_ID_CONDITION",
-                            "viewField": {
-                                "fieldId": "awsUsageaccountid",
-                                "fieldName": "Account",
-                                "identifier": "AWS",
-                                "identifierName": "AWS",
-                            },
-                            "viewOperator": "IN",
-                            "values": aws_accounts,
-                        }
+                        ViewCondition(
+                            "awsUsageaccountid",
+                            "Account",
+                            "AWS",
+                            "AWS",
+                            ViewOperator.IN,
+                            aws_accounts,
+                        ).format()
                     ]
                 }
             )
         if azure_accounts := [
-            x.identifier for x in buckets[bucket] if x.cloud == "azure"
+            x.identifier for x in buckets[name] if x.cloud == "azure"
         ]:
-            rules.append(
+            bucket.add_rule(
                 {
                     "viewConditions": [
-                        {
-                            "type": "VIEW_ID_CONDITION",
-                            "viewField": {
-                                "fieldId": "awsUsageaccountid",
-                                "fieldName": "Account",
-                                "identifier": "AZURE",
-                                "identifierName": "Azure",
-                            },
-                            "viewOperator": "IN",
-                            "values": azure_accounts,
-                        }
+                        ViewCondition(
+                            "azureSubscriptionGuid",
+                            "Subscription id",
+                            "AZURE",
+                            "Azure",
+                            ViewOperator.IN,
+                            azure_accounts,
+                        ).format()
                     ]
                 }
             )
-        if gcp_accounts := [x.identifier for x in buckets[bucket] if x.cloud == "gcp"]:
-            rules.append(
+        if gcp_accounts := [x.identifier for x in buckets[name] if x.cloud == "gcp"]:
+            bucket.add_rule(
                 {
                     "viewConditions": [
-                        {
-                            "type": "VIEW_ID_CONDITION",
-                            "viewField": {
-                                "fieldId": "awsUsageaccountid",
-                                "fieldName": "Account",
-                                "identifier": "GCP",
-                                "identifierName": "GCP",
-                            },
-                            "viewOperator": "IN",
-                            "values": gcp_accounts,
-                        }
+                        ViewCondition(
+                            "gcpProjectId",
+                            "Project",
+                            "GCP",
+                            "GCP",
+                            ViewOperator.IN,
+                            gcp_accounts,
+                        ).format()
                     ]
                 }
             )
 
-        cost_targets.append(
-            {
-                "name": bucket,
-                "rules": rules,
-            }
-        )
+        cost_targets.append(bucket.format())
 
     # create cost category and update based on buckets
     cc = CostCategory(cost_catagory_name)
 
-    if cc.update_cost_category(cost_targets):
+    if cc.update(cost_targets):
         print("update successful")
