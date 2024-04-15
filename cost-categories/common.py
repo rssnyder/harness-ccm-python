@@ -79,6 +79,7 @@ class CostCategory:
         self,
         name: str,
         uuid: str = "",
+        buckets=[],
     ):
         self.name = name
 
@@ -93,10 +94,19 @@ class CostCategory:
             else:
                 self.uuid = None
 
+        self.buckets = buckets
+
     def __repr__(self):
         return f"Cost Category: {self.name} ({self.uuid})"
 
+    def add(self, bucket: Bucket):
+        self.buckets.append(bucket)
+
     def payload(self, cost_targets: list = []):
+        if not cost_targets:
+            for bucket in self.buckets:
+                cost_targets.append(bucket.format())
+
         return {
             "accountId": getenv("HARNESS_ACCOUNT_ID"),
             "name": self.name,
@@ -157,9 +167,7 @@ class CostCategory:
 
         resp = get(
             "https://app.harness.io/ccm/api/business-mapping",
-            params={
-                "accountIdentifier": getenv("HARNESS_ACCOUNT_ID"),
-            },
+            params={"accountIdentifier": getenv("HARNESS_ACCOUNT_ID"), "limit": 100},
             headers={
                 "Content-Type": "application/json",
                 "x-api-key": getenv("HARNESS_PLATFORM_API_KEY"),

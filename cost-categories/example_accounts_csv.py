@@ -88,3 +88,4 @@ if __name__ == "__main__":
 
     if cc.update(cost_targets):
         print("update successful")
+        print(cc)
