@@ -2,10 +2,10 @@ from common import CloudAccount, CostCategory, Bucket, ViewCondition, ViewOperat
 
 
 if __name__ == "__main__":
-    cost_category = CostCategory("My buissness unites")
+    cost_category = CostCategory("My buissness units")
 
     # create a bucket for costs
-    bucket = Bucket("My Buissness Unit")
+    bucket = Bucket("This Buissness Unit")
 
     # add a rule for costs in this bucket
     # rules have some number of view conditions

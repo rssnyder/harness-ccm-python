@@ -67,10 +67,13 @@ class Bucket:
         self.name = name
         self.rules = []
 
+    def __repr__(self) -> str:
+        return f"{self.name}: {len(self.rules)} rules"
+
     def add_rule(self, rule):
         self.rules.append(rule)
 
-    def format(self):
+    def format(self) -> dict:
         return {"name": self.name, "rules": self.rules}
 
 
@@ -79,7 +82,7 @@ class CostCategory:
         self,
         name: str,
         uuid: str = "",
-        buckets=[],
+        buckets: list[Bucket] = [],
     ):
         self.name = name
 
@@ -96,13 +99,16 @@ class CostCategory:
 
         self.buckets = buckets
 
-    def __repr__(self):
-        return f"Cost Category: {self.name} ({self.uuid})"
+    def __repr__(self) -> str:
+        category = f"Cost Category: {self.name} ({self.uuid})"
+        for bucket in self.buckets:
+            category += f"\n\t{bucket}"
+        return category
 
     def add(self, bucket: Bucket):
         self.buckets.append(bucket)
 
-    def payload(self, cost_targets: list = []):
+    def payload(self, cost_targets: list = []) -> dict:
         if not cost_targets:
             for bucket in self.buckets:
                 cost_targets.append(bucket.format())
@@ -141,9 +147,9 @@ class CostCategory:
 
             resp.raise_for_status()
 
-            return resp.json()
+            return resp.status_code == 200
 
-    def create(self, cost_targets=[]):
+    def create(self, cost_targets=[]) -> bool:
         # given a list of cost targets create a cost catagory
 
         resp = post(
@@ -160,7 +166,11 @@ class CostCategory:
 
         resp.raise_for_status()
 
-        return resp.json()
+        if resp.status_code == 200:
+            self.uuid = resp.json().get("resource", {}).get("uuid")
+            return True
+
+        return False
 
     def get_all() -> list:
         # get all the cost catagories in an account
