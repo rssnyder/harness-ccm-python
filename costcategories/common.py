@@ -4,6 +4,11 @@ from enum import Enum
 from requests import get, put, post, exceptions
 
 
+HEADERS = {
+    "x-api-key": getenv("HARNESS_PLATFORM_API_KEY"),
+}
+
+
 class CloudAccount:
     def __init__(
         self,
@@ -137,14 +142,11 @@ class CostCategory:
             return self.create(cost_targets)
         else:
             resp = put(
-                "https://app.harness.io/gateway/ccm/api/business-mapping",
+                f"https://{getenv('HARNESS_URL')}/gateway/ccm/api/business-mapping",
                 params={
                     "accountIdentifier": getenv("HARNESS_ACCOUNT_ID"),
                 },
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": getenv("HARNESS_PLATFORM_API_KEY"),
-                },
+                headers=HEADERS,
                 json=self.payload(cost_targets),
             )
 
@@ -156,14 +158,11 @@ class CostCategory:
         # given a list of cost targets create a cost catagory
 
         resp = post(
-            "https://app.harness.io/gateway/ccm/api/business-mapping",
+            f"https://{getenv('HARNESS_URL')}/gateway/ccm/api/business-mapping",
             params={
                 "accountIdentifier": getenv("HARNESS_ACCOUNT_ID"),
             },
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": getenv("HARNESS_PLATFORM_API_KEY"),
-            },
+            headers=HEADERS,
             json=self.payload(cost_targets),
         )
 
@@ -179,12 +178,9 @@ class CostCategory:
         # get all the cost catagories in an account
 
         resp = get(
-            "https://app.harness.io/ccm/api/business-mapping",
+            f"https://{getenv('HARNESS_URL')}/ccm/api/business-mapping",
             params={"accountIdentifier": getenv("HARNESS_ACCOUNT_ID"), "limit": 100},
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": getenv("HARNESS_PLATFORM_API_KEY"),
-            },
+            headers=HEADERS,
         )
 
         resp.raise_for_status()
@@ -195,12 +191,9 @@ class CostCategory:
         # get the content of a cc
 
         resp = get(
-            f"https://app.harness.io/ccm/api/business-mapping/{self.uuid}",
+            f"https://{getenv('HARNESS_URL')}/ccm/api/business-mapping/{self.uuid}",
             params={"accountIdentifier": getenv("HARNESS_ACCOUNT_ID"), "limit": 100},
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": getenv("HARNESS_PLATFORM_API_KEY"),
-            },
+            headers=HEADERS,
         )
 
         resp.raise_for_status()

@@ -2,6 +2,12 @@
 
 all examples are for python >= 3.8
 
+all code uses the following for configuration:
+
+- `HARNESS_URL`: url for your harness instances, usually `app.harness.io` or `app3.harness.io`
+- `HARNESS_ACCOUNT_ID`: account id
+- `HARNESS_PLATFORM_API_KEY`: api token
+
 ## costcategories
 
 helper classes for dealing with cost categories
