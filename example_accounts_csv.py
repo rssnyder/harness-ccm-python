@@ -2,7 +2,13 @@ from csv import reader
 from sys import argv, exit
 from collections import defaultdict
 
-from common import CloudAccount, CostCategory, Bucket, ViewCondition, ViewOperator
+from costcategories import (
+    CloudAccount,
+    CostCategory,
+    Bucket,
+    ViewCondition,
+    ViewOperator,
+)
 
 
 if __name__ == "__main__":

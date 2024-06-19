@@ -83,6 +83,7 @@ class CostCategory:
         name: str,
         uuid: str = "",
         buckets: list[Bucket] = [],
+        create: bool = False,
     ):
         self.name = name
 
@@ -94,6 +95,8 @@ class CostCategory:
                 if x.get("name") == self.name
             ]:
                 self.uuid = all_cc.pop()
+            elif create:
+                self.create()
             else:
                 self.uuid = None
 
@@ -187,3 +190,19 @@ class CostCategory:
         resp.raise_for_status()
 
         return resp.json().get("resource", {}).get("businessMappings", [])
+
+    def get(self) -> dict:
+        # get the content of a cc
+
+        resp = get(
+            f"https://app.harness.io/ccm/api/business-mapping/{self.uuid}",
+            params={"accountIdentifier": getenv("HARNESS_ACCOUNT_ID"), "limit": 100},
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": getenv("HARNESS_PLATFORM_API_KEY"),
+            },
+        )
+
+        resp.raise_for_status()
+
+        return resp.json()
