@@ -142,6 +142,27 @@ if __name__ == "__main__":
 
         cost_targets.append(bucket.format())
 
+    # create a bucket to capture all "shared" tenancy costs
+    shared = Bucket("SHARED")
+
+    # add base label
+    shared.add_rule(
+        {
+            "viewConditions": [
+                ViewCondition(
+                    "labels.value",
+                    "tenancy",
+                    "LABEL",
+                    "label",
+                    ViewOperator.IN,
+                    ["shared"],
+                ).format(),
+            ]
+        }
+    )
+
+    cost_targets.append(shared.format())
+
     # create cost category and update based on buckets
     cc = CostCategory(cost_catagory_name)
 
