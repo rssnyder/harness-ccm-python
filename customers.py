@@ -1,15 +1,14 @@
 ##########################################################################################
 # create harness cost categories from csv definition
 # input:
-#   csv (comma delineated) where the first column are aws account ids
-#   the second column can be anything (account alias for example)
-#   and the rest of the columns are for each cost category you want to create
+#   csv (comma delineated) where the first column are the "organization id"
+#   the second column is the "organization name"
 #
 #   cost category name
 #
 # usage:
 #   python customers.py <csv file> <cost category name>
-
+#
 # authentication:
 #   environment variables:
 #     HARNESS_URL: url for your harness instances, usually `app.harness.io` or `app3.harness.io`
