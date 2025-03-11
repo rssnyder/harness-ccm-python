@@ -1,9 +1,13 @@
-aws,000000000001,bucket1
-aws,000000000002,bucket2
-aws,000000000003,bucket3
-azure,0000-000-000-0001,bucket1
-azure,0000-000-000-0002,bucket2
-azure,0000-000-000-0003,bucket3
-gcp,proj-0001,bucket1
-gcp,proj-0002,bucket2
-gcp,proj-0003,bucket3
+cloudType,AccountID,Standard,Shared No fixed
+aws,000000000001,bucket 1,bucket a
+aws,000000000002,bucket 2,bucket b
+azure,0000-000-000-0001,bucket 2,bucket b
+azure,0000-000-000-0002,bucket 3,bucket c
+gcp,proj-0001,bucket 3,bucket c
+gcp,proj-0002,bucket 4,bucket d
+aws,000000000003,bucket 4,shared_EQUAL_Shared Services E
+aws,000000000004,bucket 4,shared_EQUAL_Shared Services E
+aws,000000000005,bucket 4,shared_PROPORTIONAL_Shared Services F
+aws,000000000006,bucket 4,shared_PROPORTIONAL_Shared Services F
+aws,000000000007,bucket 4,shared_EQUAL_Shared Services G
+aws,000000000008,bucket 4,shared_PROPORTIONAL_Shared Services H

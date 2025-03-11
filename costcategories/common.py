@@ -1,7 +1,7 @@
 from os import getenv
 from enum import Enum
 
-from requests import get, put, post, exceptions
+from requests import get, put, post
 
 
 HEADERS = {
@@ -82,12 +82,50 @@ class Bucket:
         return {"name": self.name, "rules": self.rules}
 
 
+class Strategy(Enum):
+    EQUAL = "EQUAL"
+    PROPORTIONAL = "PROPORTIONAL"
+    FIXED = "FIXED"
+
+
+class Split:
+    def __init__(self, name: str, percent: float):
+        self.name = name
+        self.percent = percent
+
+    def format(self) -> dict:
+        return {"costTargetName": self.name, "percentageContribution": self.percent}
+
+
+class SharedBucket(Bucket):
+    def __init__(self, name: str, strategy: str, splits: list[Split] = []):
+        super().__init__(name)
+        self.strategy = strategy
+        self.splits = splits
+
+    def __repr__(self) -> str:
+        return super().__repr__() + f" {self.strategy}: {len(self.splits)} splits"
+
+    def format(self) -> dict:
+        # payload = {"strategy": self.strategy}
+        # if self.splits:
+        #     payload | {"splits": [split.format() for split in self.splits] }
+
+        return super().format() | {
+            "strategy": self.strategy,
+            "splits": [split.format() for split in self.splits]
+            if self.splits
+            else None,
+        }
+
+
 class CostCategory:
     def __init__(
         self,
         name: str,
         uuid: str = "",
         buckets: list[Bucket] = [],
+        shared_buckets: list[SharedBucket] = [],
         create: bool = False,
     ):
         self.name = name
@@ -106,6 +144,7 @@ class CostCategory:
                 self.uuid = None
 
         self.buckets = buckets
+        self.shared_buckets = shared_buckets
 
     def __repr__(self) -> str:
         category = f"Cost Category: {self.name} ({self.uuid})"
@@ -116,26 +155,30 @@ class CostCategory:
     def add(self, bucket: Bucket):
         self.buckets.append(bucket)
 
-    def payload(self, cost_targets: list = []) -> dict:
+    def payload(self, cost_targets: list = [], shared_buckets: list = []) -> dict:
         if not cost_targets:
             for bucket in self.buckets:
                 cost_targets.append(bucket.format())
+
+        if not shared_buckets:
+            for bucket in self.shared_buckets:
+                shared_buckets.append(bucket.format())
 
         return {
             "accountId": getenv("HARNESS_ACCOUNT_ID"),
             "name": self.name,
             "uuid": self.uuid,
             "costTargets": cost_targets,
+            "sharedCosts": shared_buckets,
             "unallocatedCost": {
                 "strategy": "DISPLAY_NAME",
                 "label": "Unattributed",
                 "sharingStrategy": None,
                 "splits": None,
             },
-            "sharedCosts": [],
         }
 
-    def update(self, cost_targets: list = []) -> bool:
+    def update(self, cost_targets: list = [], shared_buckets: list = []) -> bool:
         # given a list of cost targets update an existing cost catagory
 
         if not self.uuid:
@@ -147,14 +190,14 @@ class CostCategory:
                     "accountIdentifier": getenv("HARNESS_ACCOUNT_ID"),
                 },
                 headers=HEADERS,
-                json=self.payload(cost_targets),
+                json=self.payload(cost_targets, shared_buckets),
             )
 
             resp.raise_for_status()
 
             return resp.status_code == 200
 
-    def create(self, cost_targets=[]) -> bool:
+    def create(self, cost_targets: list = [], shared_buckets: list = []) -> bool:
         # given a list of cost targets create a cost catagory
 
         resp = post(
@@ -163,7 +206,7 @@ class CostCategory:
                 "accountIdentifier": getenv("HARNESS_ACCOUNT_ID"),
             },
             headers=HEADERS,
-            json=self.payload(cost_targets),
+            json=self.payload(cost_targets, shared_buckets),
         )
 
         resp.raise_for_status()
