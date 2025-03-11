@@ -1,97 +1,216 @@
 from csv import reader
 from sys import argv, exit
-from collections import defaultdict
 
 from costcategories import (
-    CloudAccount,
     CostCategory,
     Bucket,
+    SharedBucket,
     ViewCondition,
     ViewOperator,
 )
 
 
 if __name__ == "__main__":
-    if len(argv) < 3:
-        print(f"usage: {argv[0]} <csv file> <cost catagory name>")
+    if len(argv) < 2:
+        print(f"usage: {argv[0]} <csv file>")
         exit(1)
 
     csv_file = argv[1]
-    cost_catagory_name = argv[2]
 
+    # load in the file
     file = open(csv_file, "r")
     reader = reader(file, delimiter=",")
 
-    # load all rows
-    accounts = []
-    buckets = defaultdict(list)
+    # grab first row (headers) and build cost category storage
+    metadata = reader.__next__()
 
-    for column in reader:
-        account = CloudAccount(column[0].lower(), column[1], column[2])
+    cost_categories = {}
+    # cost categories are defined after column 2
+    for category in metadata[2:]:
+        cost_categories[category] = {"buckets": {}, "shared": {}}
 
-        accounts.append(account)
-        buckets[account.bucket].append(account)
+    print(metadata)
+    print(cost_categories)
 
-    # build cost catagory buckets
-    cost_targets = []
+    # process all other rows
+    for row in reader:
+        cloud = row[0]
+        account_id = row[1]
+        print(cloud, account_id)
+        # for each cost category (column 3 onward), place account in bucket
+        for idx, bucket in enumerate(row[2:], start=2):
+            # catch shared buckets
+            if bucket.startswith("shared_"):
+                name = bucket.split("_")[2]
+                type = bucket.split("_")[1]
 
-    for name in buckets.keys():
-        # create rules for each cloud
-        bucket = Bucket(name)
+                print(name, type)
 
-        if aws_accounts := [x.identifier for x in buckets[name] if x.cloud == "aws"]:
-            bucket.add_rule(
-                {
-                    "viewConditions": [
-                        ViewCondition(
-                            "awsUsageaccountid",
-                            "Account",
-                            "AWS",
-                            "AWS",
-                            ViewOperator.IN,
-                            aws_accounts,
-                        ).format()
-                    ]
-                }
+                # add account to shared bucket
+                if name in cost_categories[metadata[idx]]["shared"]:
+                    if (
+                        cloud
+                        in cost_categories[metadata[idx]]["shared"][name]["accounts"]
+                    ):
+                        cost_categories[metadata[idx]]["shared"][name]["accounts"][
+                            cloud
+                        ].append(account_id)
+                    else:
+                        cost_categories[metadata[idx]]["shared"][name]["accounts"][
+                            cloud
+                        ] = [account_id]
+                else:
+                    cost_categories[metadata[idx]]["shared"][name] = {
+                        "accounts": {cloud: [account_id]},
+                        "type": type,
+                    }
+
+            # regular buckets
+            else:
+                if bucket in cost_categories[metadata[idx]]["buckets"]:
+                    if cloud in cost_categories[metadata[idx]]["buckets"][bucket]:
+                        cost_categories[metadata[idx]]["buckets"][bucket][cloud].append(
+                            account_id
+                        )
+                    else:
+                        cost_categories[metadata[idx]]["buckets"][bucket][cloud] = [
+                            account_id
+                        ]
+                else:
+                    cost_categories[metadata[idx]]["buckets"][bucket] = {
+                        cloud: [account_id]
+                    }
+
+    # create each cost category
+    for category in cost_categories:
+        # build cost targets (buckets)
+        cost_targets = []
+
+        for bucket_name in cost_categories[category]["buckets"].keys():
+            bucket = Bucket(bucket_name)
+
+            if "aws" in cost_categories[category]["buckets"][bucket_name]:
+                bucket.add_rule(
+                    {
+                        "viewConditions": [
+                            ViewCondition(
+                                "awsUsageaccountid",
+                                "Account",
+                                "AWS",
+                                "AWS",
+                                ViewOperator.IN,
+                                cost_categories[category]["buckets"][bucket_name][
+                                    "aws"
+                                ],
+                            ).format()
+                        ]
+                    }
+                )
+            if "azure" in cost_categories[category]["buckets"][bucket_name]:
+                bucket.add_rule(
+                    {
+                        "viewConditions": [
+                            ViewCondition(
+                                "azureSubscriptionGuid",
+                                "Subscription id",
+                                "AZURE",
+                                "Azure",
+                                ViewOperator.IN,
+                                cost_categories[category]["buckets"][bucket_name][
+                                    "azure"
+                                ],
+                            ).format()
+                        ]
+                    }
+                )
+            if "gcp" in cost_categories[category]["buckets"][bucket_name]:
+                bucket.add_rule(
+                    {
+                        "viewConditions": [
+                            ViewCondition(
+                                "gcpProjectId",
+                                "Project",
+                                "GCP",
+                                "GCP",
+                                ViewOperator.IN,
+                                cost_categories[category]["buckets"][bucket_name][
+                                    "gcp"
+                                ],
+                            ).format()
+                        ]
+                    }
+                )
+
+            cost_targets.append(bucket.format())
+
+        shared_buckets = []
+
+        for bucket_name in cost_categories[category]["shared"].keys():
+            bucket = SharedBucket(
+                bucket_name, cost_categories[category]["shared"][bucket_name]["type"]
             )
-        if azure_accounts := [
-            x.identifier for x in buckets[name] if x.cloud == "azure"
-        ]:
-            bucket.add_rule(
-                {
-                    "viewConditions": [
-                        ViewCondition(
-                            "azureSubscriptionGuid",
-                            "Subscription id",
-                            "AZURE",
-                            "Azure",
-                            ViewOperator.IN,
-                            azure_accounts,
-                        ).format()
-                    ]
-                }
-            )
-        if gcp_accounts := [x.identifier for x in buckets[name] if x.cloud == "gcp"]:
-            bucket.add_rule(
-                {
-                    "viewConditions": [
-                        ViewCondition(
-                            "gcpProjectId",
-                            "Project",
-                            "GCP",
-                            "GCP",
-                            ViewOperator.IN,
-                            gcp_accounts,
-                        ).format()
-                    ]
-                }
-            )
 
-        cost_targets.append(bucket.format())
+            if "aws" in cost_categories[category]["shared"][bucket_name]["accounts"]:
+                bucket.add_rule(
+                    {
+                        "viewConditions": [
+                            ViewCondition(
+                                "awsUsageaccountid",
+                                "Account",
+                                "AWS",
+                                "AWS",
+                                ViewOperator.IN,
+                                cost_categories[category]["shared"][bucket_name][
+                                    "accounts"
+                                ]["aws"],
+                            ).format()
+                        ]
+                    }
+                )
+            if "azure" in cost_categories[category]["shared"][bucket_name]["accounts"]:
+                bucket.add_rule(
+                    {
+                        "viewConditions": [
+                            ViewCondition(
+                                "azureSubscriptionGuid",
+                                "Subscription id",
+                                "AZURE",
+                                "Azure",
+                                ViewOperator.IN,
+                                cost_categories[category]["shared"][bucket_name][
+                                    "accounts"
+                                ]["azure"],
+                            ).format()
+                        ]
+                    }
+                )
+            if "gcp" in cost_categories[category]["shared"][bucket_name]["accounts"]:
+                bucket.add_rule(
+                    {
+                        "viewConditions": [
+                            ViewCondition(
+                                "gcpProjectId",
+                                "Project",
+                                "GCP",
+                                "GCP",
+                                ViewOperator.IN,
+                                cost_categories[category]["shared"][bucket_name][
+                                    "accounts"
+                                ]["gcp"],
+                            ).format()
+                        ]
+                    }
+                )
 
-    # create cost category and update based on buckets
-    cc = CostCategory(cost_catagory_name)
+            shared_buckets.append(bucket.format())
 
-    if cc.update(cost_targets):
-        print("update successful")
-        print(cc)
+        # print(shared_buckets)
+
+        # create cost category and update based on buckets
+        cc = CostCategory(category)
+
+        print(cc.payload(cost_targets, shared_buckets))
+
+        if cc.update(cost_targets, shared_buckets):
+            print("update successful")
+            print(cc)
