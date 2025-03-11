@@ -29,22 +29,17 @@ if __name__ == "__main__":
     for category in metadata[2:]:
         cost_categories[category] = {"buckets": {}, "shared": {}}
 
-    print(metadata)
-    print(cost_categories)
-
     # process all other rows
     for row in reader:
         cloud = row[0]
         account_id = row[1]
-        print(cloud, account_id)
+
         # for each cost category (column 3 onward), place account in bucket
         for idx, bucket in enumerate(row[2:], start=2):
             # catch shared buckets
             if bucket.startswith("shared_"):
                 name = bucket.split("_")[2]
                 type = bucket.split("_")[1]
-
-                print(name, type)
 
                 # add account to shared bucket
                 if name in cost_categories[metadata[idx]]["shared"]:
@@ -204,12 +199,8 @@ if __name__ == "__main__":
 
             shared_buckets.append(bucket.format())
 
-        # print(shared_buckets)
-
         # create cost category and update based on buckets
         cc = CostCategory(category)
-
-        print(cc.payload(cost_targets, shared_buckets))
 
         if cc.update(cost_targets, shared_buckets):
             print("update successful")
