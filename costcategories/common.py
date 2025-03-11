@@ -143,6 +143,7 @@ class CostCategory:
         else:
             resp = put(
                 f"https://{getenv('HARNESS_URL')}/gateway/ccm/api/business-mapping",
+                verify=False,
                 params={
                     "accountIdentifier": getenv("HARNESS_ACCOUNT_ID"),
                 },
@@ -159,6 +160,7 @@ class CostCategory:
 
         resp = post(
             f"https://{getenv('HARNESS_URL')}/gateway/ccm/api/business-mapping",
+            verify=False,
             params={
                 "accountIdentifier": getenv("HARNESS_ACCOUNT_ID"),
             },
@@ -179,6 +181,7 @@ class CostCategory:
 
         resp = get(
             f"https://{getenv('HARNESS_URL')}/ccm/api/business-mapping",
+            verify=False,
             params={"accountIdentifier": getenv("HARNESS_ACCOUNT_ID"), "limit": 100},
             headers=HEADERS,
         )
@@ -192,6 +195,7 @@ class CostCategory:
 
         resp = get(
             f"https://{getenv('HARNESS_URL')}/ccm/api/business-mapping/{self.uuid}",
+            verify=False,
             params={"accountIdentifier": getenv("HARNESS_ACCOUNT_ID"), "limit": 100},
             headers=HEADERS,
         )
